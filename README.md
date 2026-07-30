@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# E2EE的私人零信任PMS 密钥管理系统改造方案
 
-## Getting Started
+## 背景
 
-First, run the development server:
+### 用户画像
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+用户是单人用户，不愿意把DB给别人，希望不信任任何人，PASS(后端平台，DB提供商)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 应用场景
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+视为user的DB，后端被黑客破解，监听着，但是黑客无法篡改数据；或者说本系统是防止黑客获得我的明文，不对黑客篡改数据负责
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 现有框架
 
-## Learn More
+现有pms，基于CS，BS双架构实现，
 
-To learn more about Next.js, take a look at the following resources:
+CS：Winform .NET框架，实现对密钥的全管理
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+BS： Vue3+SpringBoot,只能查看
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 现有部署
 
-## Deploy on Vercel
+CS架构部署在本地电脑，BS架构未部署（可以部署在服务器）；DB位于本地
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 缺陷
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. 手机无法访问系统
+2. 需要电脑开机才能访问
+
+## 改造方案
+
+### 部署形式与平台
+
+为了使手机，电脑都能访问，现计划改造项目为BS架构（无需本地服务器，能云平台部署的）
+
+将后端部署到云平台（实测可以使用nextjs+vercel实现）
+
+
+
+### 开发架构，技术
+
+后端：Nextjs项目，部署于Vercel
+
+前端：VUE+封装技术封装，使得安卓和windows可以访问，（最好不要浏览器公网访问）MAY: Tauri v2
+
+算法：crypto：AES, TOTP
+
+事务要求：保持密钥轮换的原子性和一致性
+
+事务逻辑时间：非长连接下需要对DB实现短时间任务
+
+安全性：
+
+#### 1 使用各个算法保持安全，后端不可获得明文信息
+
+（
+
+AES128+随机 IV加密数据，存放于DB，AESkey持有于客户
+
+AES解密发生于：
+
+1. 客户取得信道解密数据后，使用user自己的key解密
+
+）
+
+#### 2 数据安全保护II: 密钥轮转
+
+给与密钥轮转机制与接口，客户需要能够一键修改密钥
+
+客户端本地完成全量数据的解密与新 Key 重加密，提交批量映射数组至后端，在 DB 单个事务（Transaction）内一次性 Commit，保证轮转的原子性与一致性
+
+#### 3 后端与中间端的基于令牌的相互验证方法
+
+部署vercel和cfworkers时的密钥验证，通信时需要密钥相互验证身份
+
+#### 4 密钥轮转以及业务的的一致性与原子性
+
+引入事务的机制
+
+#### 5端口保护
+
+##### 单user保护方法
+
+带有key的过滤保护方案，
+
+
+
+
+
+## 附录细节
+
+### CF-workers
+
+#### 变量和密钥
+
+CF-workers有密钥变量，仅支持密钥轮转（可以修改不能查看）可以存储与vercel的信道密钥和与user的可信密钥
+
+#### 其它端口保护方案
+
+##### 多user DOS保护方法
+
+采用滑动窗口IP限流:ratelimiter
+
+##### 多user DDOS保护方法
+
+采用POW基于算力的机制，CFWORKERS根据上一个时间微元访问次数，给与访客出难题，必须解决难题才能与workers通信，workers转发请求
+
+
+
+
+
+
+
