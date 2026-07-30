@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import mysql, { type Pool } from 'mysql2/promise';
 
 const dbConfig = {
   host: process.env.MYSQL_HOST,
@@ -11,8 +11,13 @@ const dbConfig = {
   queueLimit: 0,
 };
 
+// 1. 扩展 TypeScript 的全局类型声明
+declare global {
+  // eslint-disable-next-line no-var
+  var mysqlPool: Pool | undefined;
+}
 // 单例模式：防止 Vercel / Next.js 热重载或实例复用时创建重复连接池
-let pool;
+
 
 if (!global.mysqlPool) {
   global.mysqlPool = mysql.createPool(dbConfig);
