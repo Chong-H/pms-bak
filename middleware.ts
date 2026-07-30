@@ -3,6 +3,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
+  // 1. 获取客户端原始请求协议（Vercel 边缘网关注入）
+  const proto = request.headers.get('x-forwarded-proto');
+
+  // 🚨 显式拒绝 HTTP：如果是明文 HTTP 请求，直接抛出 403 拒绝访问！
+  if (proto === 'http') {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden: Direct HTTP access is explicitly prohibited. Please use HTTPS.',
+      },
+      { status: 403 }
+    );
+  }
   // 1. 从请求头中提取 Authorization
   const authHeader = request.headers.get('authorization');
   
